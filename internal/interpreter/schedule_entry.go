@@ -1,14 +1,16 @@
 package interpreter
 
 import (
-	"math"
+	"fmt"
+	"sort"
 	"time"
 )
 
-const TOLERANCE_X = 6
-const TOLERANCE_Y = 6
+const TOLERANCE_X = 8
+const TOLERANCE_Y = 8
 
-const SCHEDULE_ITEM_WIDTH = 84
+// TODO: we have to figure out a better way to determine the correct day...
+const SCHEDULE_ITEM_WIDTH = 87
 
 type ScheduleEntry struct {
 	Code    string
@@ -16,6 +18,10 @@ type ScheduleEntry struct {
 	End     time.Time
 	SourceX int
 	SourceY int
+}
+
+func (s *ScheduleEntry) GetWorktime() string {
+	return fmt.Sprintf("%02d.%02d.%d (%02d:%02d - %02d:%02d)", s.Start.Day(), s.Start.Month(), s.Start.Year(), s.Start.Hour(), s.Start.Minute(), s.End.Hour(), s.End.Minute())
 }
 
 type ScheduleEntries struct {
@@ -28,7 +34,7 @@ func NewScheduleEntries() ScheduleEntries {
 	}
 }
 
-func (se *ScheduleEntries) AddEntry(scheduleType ScheduleType, x int, y int) bool {
+func (se *ScheduleEntries) AddEntry(scheduleType ScheduleType, date time.Time, x int, y int) bool {
 	// basic sanity checks
 	if scheduleType.Code == "" {
 		return false
@@ -46,10 +52,19 @@ func (se *ScheduleEntries) AddEntry(scheduleType ScheduleType, x int, y int) boo
 		}
 	}
 
+	// determine day based on x offset
+	day := (x-SCHEDULE_PADDING)/SCHEDULE_ITEM_WIDTH + 1
+
+	// make sure overnight shifts are properly reflected
+	endDayOffset := 0
+	if scheduleType.StartTime.Hour() > scheduleType.EndTime.Hour() {
+		endDayOffset = 1
+	}
+
 	newEntry := ScheduleEntry{
 		Code:    scheduleType.Code,
-		Start:   scheduleType.StartTime,
-		End:     scheduleType.EndTime,
+		Start:   time.Date(date.Year(), date.Month(), day, scheduleType.StartTime.Hour(), scheduleType.StartTime.Minute(), 0, 0, date.Location()),
+		End:     time.Date(date.Year(), date.Month(), day+endDayOffset, scheduleType.EndTime.Hour(), scheduleType.EndTime.Minute(), 0, 0, date.Location()),
 		SourceX: x,
 		SourceY: y,
 	}
@@ -57,16 +72,8 @@ func (se *ScheduleEntries) AddEntry(scheduleType ScheduleType, x int, y int) boo
 	return true
 }
 
-func (se *ScheduleEntries) SetCorrectDates(startDate time.Time) {
-	for _, entry := range se.Entries {
-		offsetX := entry.SourceX - SCHEDULE_PADDING
-		day := math.Ceil(float64(entry.SourceX) / SCHEDULE_ITEM_WIDTH)
-		if offsetX < SCHEDULE_ITEM_WIDTH {
-			day = 1
-		}
-		entry.Start = time.Date(
-			startDate.Year(), startDate.Month(), int(day),
-			entry.Start.Hour(), entry.Start.Minute(), 0, 0,
-			startDate.Location())
-	}
+func (se *ScheduleEntries) SortEntriesByDate() {
+	sort.Slice(se.Entries, func(i, j int) bool {
+		return se.Entries[i].Start.Before(se.Entries[j].Start)
+	})
 }

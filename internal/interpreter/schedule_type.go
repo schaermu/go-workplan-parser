@@ -14,27 +14,6 @@ type ScheduleType struct {
 	IsWholeDay    bool
 }
 
-/*
-schedule_types = [
-	ScheduleType('1', '07:45', '16:45'),
-	ScheduleType('1_blau', '', ''),
-	ScheduleType('a1_3', '', ''),
-	ScheduleType('brille', '', ''),
-	ScheduleType('buero', '', ''),
-	ScheduleType('buero_p12', '', ''),
-	ScheduleType('ferien', '', ''),
-	ScheduleType('frei', '', ''),
-	ScheduleType('k', '', ''),
-	ScheduleType('k1', '', ''),
-	ScheduleType('k2', '', ''),
-	ScheduleType('k3', '', ''),
-	ScheduleType('nacht', '', ''),
-	ScheduleType('p12', '', ''),
-	ScheduleType('p24', '', ''),
-	ScheduleType('t2', '', '')
-]
-*/
-
 var scheduleTypes = []ScheduleType{
 	createScheduleType("fruehdienst", "t", "07:00", "15:30"),
 	createScheduleType("spaetdienst", "1_blau", "15:00", "22:30"),

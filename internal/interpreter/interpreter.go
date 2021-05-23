@@ -7,6 +7,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/agnivade/levenshtein"
 	"github.com/otiai10/gosseract/v2"
@@ -160,7 +161,7 @@ func (i *Interpreter) ExtractScheduleRow(x int, y int) string {
 	return scheduleRowFilename
 }
 
-func (i *Interpreter) IdentifyWorkSchedule(scheduleRowFile string) ScheduleEntries {
+func (i *Interpreter) IdentifyWorkSchedule(scheduleRowFile string, startTime time.Time) ScheduleEntries {
 	detectedScheduleRow := i.getNewFilename("schedule_row_detected")
 	mat := gocv.IMRead(scheduleRowFile, gocv.IMReadAnyColor)
 
@@ -182,7 +183,7 @@ func (i *Interpreter) IdentifyWorkSchedule(scheduleRowFile string) ScheduleEntri
 				matchRect := image.Rect(maxLoc.X, maxLoc.Y, maxLoc.X+iconMat.Size()[1], maxLoc.Y+iconMat.Size()[0])
 
 				// make sure we dont add false positives
-				if added := scheduleResults.AddEntry(schedule, maxLoc.X, maxLoc.Y); added {
+				if added := scheduleResults.AddEntry(schedule, startTime, maxLoc.X, maxLoc.Y); added {
 					log.Printf("      Found match for %s at %d,%d...", schedule.Code, maxLoc.X, maxLoc.Y)
 					gocv.Rectangle(&mat, matchRect, color.RGBA{R: 0, G: 255, B: 0}, 2)
 				}

@@ -1,6 +1,7 @@
 package parser
 
 import (
+	"fmt"
 	"io/ioutil"
 	"log"
 	"os"
@@ -57,8 +58,13 @@ func (p *Parser) ProcessPages() {
 		interpreter := interpreter.New(imageFileName)
 		x, y, month, year := interpreter.GetSearchVector(p.needle)
 		scheduleRowFile := interpreter.ExtractScheduleRow(x, y)
-		schedule := interpreter.IdentifyWorkSchedule(scheduleRowFile)
-		schedule.SetCorrectDates(time.Date(year, time.Month(month), 1, 0, 0, 0, 0, time.Now().Location()))
+		startTime := time.Date(year, time.Month(month), 1, 0, 0, 0, 0, time.Now().Location())
+		schedule := interpreter.IdentifyWorkSchedule(scheduleRowFile, startTime)
+		schedule.SortEntriesByDate()
+
+		for _, entry := range schedule.Entries {
+			println(fmt.Sprintf("%s - %s", entry.GetWorktime(), entry.Code))
+		}
 	}
 }
 
