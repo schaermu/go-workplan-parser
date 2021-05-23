@@ -6,6 +6,7 @@ import (
 	"os"
 	"path"
 	"strings"
+	"time"
 
 	"github.com/pdfcpu/pdfcpu/pkg/api"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
@@ -54,9 +55,10 @@ func (p *Parser) ProcessPages() {
 		p.convertPageToImage(path.Join(tempDir, f.Name()), imageFileName)
 
 		interpreter := interpreter.New(imageFileName)
-		x, y := interpreter.GetSearchVector(p.needle)
+		x, y, month, year := interpreter.GetSearchVector(p.needle)
 		scheduleRowFile := interpreter.ExtractScheduleRow(x, y)
-		interpreter.IdentifyWorkSchedule(scheduleRowFile)
+		schedule := interpreter.IdentifyWorkSchedule(scheduleRowFile)
+		schedule.SetCorrectDates(time.Date(year, time.Month(month), 1, 0, 0, 0, 0, time.Now().Location()))
 	}
 }
 

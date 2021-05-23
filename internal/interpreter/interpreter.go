@@ -5,6 +5,7 @@ import (
 	"image/color"
 	"log"
 	"regexp"
+	"strconv"
 	"strings"
 
 	"github.com/agnivade/levenshtein"
@@ -17,7 +18,11 @@ const SCHEDULE_OFFSET_Y = -30
 const SCHEDULE_WIDTH = 2780
 const SCHEDULE_HEIGHT = 95
 const SCHEDULE_PADDING = 20
-const SCHEDULE_ITEM_WIDTH = 84
+
+var MONTH_LIST = []string{
+	"Januar", "Februar", "März", "April", "Mai", "Juni", "Juli",
+	"August", "September", "Oktober", "November", "Dezember",
+}
 
 type Interpreter struct {
 	plan string
@@ -27,7 +32,7 @@ func New(planImage string) Interpreter {
 	return Interpreter{plan: planImage}
 }
 
-func (i *Interpreter) GetSearchVector(needle string) (x int, y int) {
+func (i *Interpreter) GetSearchVector(needle string) (x int, y int, month int, year int) {
 	// create an ocr readable file from the original page (convert to b/w, gauss, binarize using threshold)
 	ocrImageFile := i.getNewFilename("ocr")
 	mat := gocv.IMRead(i.plan, gocv.IMReadAnyColor)
@@ -44,7 +49,7 @@ func (i *Interpreter) GetSearchVector(needle string) (x int, y int) {
 	removeLine(&threshMat, image.Point{X: 1, Y: 80}, color.RGBA{R: 0, G: 0, B: 0})
 
 	// configure text detection
-	kernel := gocv.GetStructuringElement(gocv.MorphRect, image.Point{X: 20, Y: 9})
+	kernel := gocv.GetStructuringElement(gocv.MorphRect, image.Point{X: 25, Y: 9})
 	dilatedMat := gocv.NewMat()
 	gocv.Dilate(threshMat, &dilatedMat, kernel)
 
@@ -59,16 +64,15 @@ func (i *Interpreter) GetSearchVector(needle string) (x int, y int) {
 	log.Print("  Stored masked ocr image, starting contour detection...")
 
 	contours := gocv.FindContours(postProcessed, gocv.RetrievalExternal, gocv.ChainApproxSimple)
-	ocrTargetMat := mat.Clone()
-	namePattern := regexp.MustCompile("[^A-Za-z0-9 ]+")
+	ocrTargetMat := grayMat.Clone()
+	namePattern := regexp.MustCompile(`[^\p{L}\d_ ]+`)
+	yearOnlyPattern := regexp.MustCompile(`^2[0-9]{3}$`)
+	yearPattern := regexp.MustCompile(`2[0-9]{3}`)
 
 	tesseract := gosseract.NewClient()
+	tesseract.Languages = []string{"deu"}
 	defer tesseract.Close()
 
-	var (
-		startX = 0
-		startY = 0
-	)
 	log.Printf("  Starting OCR on %d contours looking for '%s'...", contours.Size(), needle)
 	for i := 0; i < contours.Size(); i++ {
 		ocrRect := gocv.BoundingRect(contours.At(i))
@@ -76,22 +80,61 @@ func (i *Interpreter) GetSearchVector(needle string) (x int, y int) {
 
 		imageBytes, _ := gocv.IMEncode(gocv.PNGFileExt, croppedMat)
 		tesseract.SetImageFromBytes(imageBytes)
-		text, _ := tesseract.Text()
+		text, err := tesseract.Text()
+		if err != nil {
+			log.Print(err)
+		}
 		if text != "" {
-			// cleanup text, get levenshtein distance against needle
-			text = namePattern.ReplaceAllString(text, "")
-			distance := levenshtein.ComputeDistance(text, needle)
+			// cleanup text by trimming and removing anything invalid
+			text = namePattern.ReplaceAllString(strings.TrimSpace(text), "")
 
-			if distance < 3 {
-				startX = ocrRect.Min.X + SCHEDULE_OFFSET_X
-				startY = ocrRect.Min.Y + SCHEDULE_OFFSET_Y
-				log.Printf("  Found search string %s, returning vector %d,%d.", text, startX, startY)
-				break
+			// check if we are processing the year only (caution: sometimes, ocr will split the month and year)
+			if year == 0 && yearOnlyPattern.MatchString(text) {
+				// exact year found, parse
+				year, err = strconv.Atoi(text)
+				if err != nil {
+					log.Print(err)
+				}
+				log.Printf("    Exact year match %s => %d", text, year)
+			}
+
+			if month == 0 {
+				// check if we got both month an year in one line
+				if yearPattern.MatchString(text) {
+					year, err = strconv.Atoi(yearPattern.FindString(text))
+					if err != nil {
+						log.Print(err)
+					}
+					log.Printf("    Fuzzy year match %s => %d", text, year)
+				}
+
+				// strip numbers from text before checking for month
+				nonIntText := strings.TrimSpace(yearPattern.ReplaceAllString(text, ""))
+				for idx, m := range MONTH_LIST {
+					if nonIntText == m {
+						month = idx + 1
+						log.Printf("    Month match %s => %d", text, month)
+						break
+					}
+				}
+			}
+
+			//  get levenshtein distance against needle
+			if x == 0 && y == 0 {
+				distance := levenshtein.ComputeDistance(text, needle)
+
+				if distance < 3 {
+					x = ocrRect.Min.X + SCHEDULE_OFFSET_X
+					y = ocrRect.Min.Y + SCHEDULE_OFFSET_Y
+					log.Printf("    Found search string %s, saving vector %d,%d.", text, x, y)
+				}
 			}
 		}
 	}
 
-	return startX, startY
+	log.Printf("  Setting month to %s %d.", MONTH_LIST[month-1], year)
+
+	return x, y, month, year
 }
 
 func (i *Interpreter) ExtractScheduleRow(x int, y int) string {
@@ -117,7 +160,7 @@ func (i *Interpreter) ExtractScheduleRow(x int, y int) string {
 	return scheduleRowFilename
 }
 
-func (i *Interpreter) IdentifyWorkSchedule(scheduleRowFile string) {
+func (i *Interpreter) IdentifyWorkSchedule(scheduleRowFile string) ScheduleEntries {
 	detectedScheduleRow := i.getNewFilename("schedule_row_detected")
 	mat := gocv.IMRead(scheduleRowFile, gocv.IMReadAnyColor)
 
@@ -154,6 +197,7 @@ func (i *Interpreter) IdentifyWorkSchedule(scheduleRowFile string) {
 
 	gocv.IMWrite(detectedScheduleRow, mat)
 	log.Print("  Stored detection results.")
+	return scheduleResults
 }
 
 func (i *Interpreter) getNewFilename(part string) string {
