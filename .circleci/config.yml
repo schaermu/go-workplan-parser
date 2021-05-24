@@ -54,7 +54,7 @@ jobs:
           path: /tmp/test-results
   release:
     docker:
-      - image: circleci/golang:1.16
+      - image: schaermu/cci-golang-opencv-tesseract:latest
     steps:
       - checkout
       - run: curl -sL https://git.io/goreleaser | bash
