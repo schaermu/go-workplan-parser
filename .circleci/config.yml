@@ -13,7 +13,7 @@ workflows:
 jobs:
   build:
     docker:
-      - image: circleci/golang:1.16
+      - image: schaermu/cci-golang-opencv-tesseract:latest
     parallelism: 2
     environment:
       TEST_RESULTS: /tmp/test-results
