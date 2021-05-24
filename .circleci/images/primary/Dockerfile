@@ -22,9 +22,10 @@ RUN apt-get update && apt-get install -y \
     
 ENV PATH="/usr/local/go/bin:${PATH}"
 
-# install golang
-RUN curl -L https://golang.org/dl/go1.16.4.linux-amd64.tar.gz -o go1.16.4.linux-amd64.tar.gz \
-    && rm -rf /usr/local/go && tar -C /usr/local -xzf go1.16.4.linux-amd64.tar.gz
+# install golang & gotestsum
+RUN curl -sSL https://golang.org/dl/go1.16.4.linux-amd64.tar.gz -o go1.16.4.linux-amd64.tar.gz \
+    && rm -rf /usr/local/go && tar -C /usr/local -xzf go1.16.4.linux-amd64.tar.gz \
+    && curl -sSL https://github.com/gotestyourself/gotestsum/releases/download/v0.4.2/gotestsum_0.4.2_linux_amd64.tar.gz | tar -xz -C /usr/local/bin gotestsum
 
 ENV GOPATH="/root/go"
 
