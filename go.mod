@@ -3,8 +3,10 @@ module github.com/schaermu/workplan-parser
 go 1.16
 
 require (
+	cloud.google.com/go v0.82.0 // indirect
 	github.com/agnivade/levenshtein v1.1.1
 	github.com/fsnotify/fsnotify v1.4.9 // indirect
+	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
 	github.com/magiconair/properties v1.8.5 // indirect
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/mitchellh/mapstructure v1.4.1 // indirect
@@ -17,7 +19,12 @@ require (
 	github.com/spf13/jwalterweatherman v1.1.0 // indirect
 	github.com/spf13/viper v1.7.1
 	gocv.io/x/gocv v0.27.0
-	golang.org/x/sys v0.0.0-20210514084401-e8d321eab015 // indirect
+	golang.org/x/net v0.0.0-20210525063256-abc453219eb5 // indirect
+	golang.org/x/oauth2 v0.0.0-20210514164344-f6687ab2804c
+	golang.org/x/sys v0.0.0-20210521203332-0cec03c779c1 // indirect
+	google.golang.org/api v0.47.0
+	google.golang.org/genproto v0.0.0-20210524171403-669157292da3 // indirect
+	google.golang.org/grpc v1.38.0 // indirect
 	gopkg.in/gographics/imagick.v2 v2.6.0
 	gopkg.in/ini.v1 v1.62.0 // indirect
 )

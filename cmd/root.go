@@ -19,7 +19,7 @@ var rootCmd = &cobra.Command{
 	Long: `This CLI allows you to parse data from Inselgruppe workplans for a specific employee.
 	
 The best usage is piped, for example:
-workplan-parser parse -i path/to/plan.pdf -e "Joan Doe" | workplan-parser convert > output.ics
+workplan-parser parse -i path/to/plan.pdf -e "Joan Doe" | workplan-parser import -c "Calendar name"
 
 If you want to just get some output, you can also just use parse.`,
 }
@@ -32,10 +32,6 @@ func Execute() {
 
 func init() {
 	cobra.OnInitialize(initConfig)
-
-	// Here you will define your flags and configuration settings.
-	// Cobra supports persistent flags, which, if defined here,
-	// will be global for your application.
 
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.workplan-parser.yaml)")
 }

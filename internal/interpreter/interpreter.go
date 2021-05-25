@@ -154,7 +154,7 @@ func (i *Interpreter) ExtractScheduleRow(x int, y int) string {
 		SCHEDULE_PADDING,
 		SCHEDULE_PADDING,
 		gocv.BorderConstant,
-		color.RGBA{R: 255, G: 255, B: 255},
+		color.RGBA{R: 255, G: 255, B: 255, A: 1},
 	)
 	gocv.IMWrite(scheduleRowFilename, paddedScheduleMat)
 	log.Print("  Stored extracted schedule row.")

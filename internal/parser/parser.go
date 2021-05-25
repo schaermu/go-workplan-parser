@@ -27,7 +27,7 @@ func New(needle string, filePath string) *Parser {
 	}
 }
 
-func (p *Parser) ProcessPages() {
+func (p *Parser) ProcessPages(pageNumber int) map[int]*interpreter.ScheduleEntries {
 	file, err := os.Open(p.pdfFile)
 	if err != nil {
 		log.Fatal(err)
@@ -39,8 +39,14 @@ func (p *Parser) ProcessPages() {
 		log.Fatal(err)
 	}
 
+	selectedPages := []string{}
+	if pageNumber > 0 {
+		// construct pagenumber restriction
+		selectedPages = append(selectedPages, fmt.Sprintf("%d", pageNumber))
+	}
+
 	config := pdfcpu.NewDefaultConfiguration()
-	err = api.ExtractPagesFile(p.pdfFile, tempDir, nil, config)
+	err = api.ExtractPagesFile(p.pdfFile, tempDir, selectedPages, config)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -50,7 +56,8 @@ func (p *Parser) ProcessPages() {
 		log.Fatal(err)
 	}
 
-	for _, f := range images {
+	res := map[int]*interpreter.ScheduleEntries{}
+	for index, f := range images {
 		imageFileName := path.Join(tempDir, strings.Replace(f.Name(), ".pdf", ".png", -1))
 		log.Printf("Processing page %s...\n", f.Name())
 		p.convertPageToImage(path.Join(tempDir, f.Name()), imageFileName)
@@ -65,7 +72,9 @@ func (p *Parser) ProcessPages() {
 		for _, entry := range schedule.Entries {
 			println(fmt.Sprintf("%s - %s", entry.GetWorktime(), entry.Code))
 		}
+		res[index+1] = &schedule
 	}
+	return res
 }
 
 func (p *Parser) convertPageToImage(pdfPath string, target string) {
