@@ -45,13 +45,29 @@ func NewCalendarClient(calendarId string) CalendarClient {
 	}
 }
 
+func (c *CalendarClient) ClearEvents(from time.Time) {
+	untilDate := from.AddDate(0, 1, 0)
+	events, err := c.client.Events.List(c.calendarId).ShowDeleted(false).SingleEvents(true).
+		TimeMin(from.Format(time.RFC3339)).TimeMax(untilDate.Format(time.RFC3339)).MaxResults(50).Do()
+	if err != nil {
+		log.Fatalf("    Unable to list events: %v\n", err)
+	}
+
+	if len(events.Items) > 0 {
+		for _, event := range events.Items {
+			c.client.Events.Delete(c.calendarId, event.Id).Do()
+		}
+	}
+	log.Printf("  Cleared out events for month %s\n", from.Month().String())
+}
+
 func (c *CalendarClient) CreateEvent(start time.Time, end time.Time, description string, isAllDayEvent bool) {
 	startDate := &calendar.EventDateTime{
-		DateTime: start.Format("2006-01-02T15:04:05"),
+		DateTime: start.Format(time.RFC3339),
 		TimeZone: "Europe/Zurich",
 	}
 	endDate := &calendar.EventDateTime{
-		DateTime: end.Format("2006-01-02T15:04:05"),
+		DateTime: end.Format(time.RFC3339),
 		TimeZone: "Europe/Zurich",
 	}
 
@@ -76,7 +92,7 @@ func (c *CalendarClient) CreateEvent(start time.Time, end time.Time, description
 
 	event, err := c.client.Events.Insert(c.calendarId, event).Do()
 	if err != nil {
-		log.Fatalf("    Unable to create event %v\n", err)
+		log.Fatalf("    Unable to create event: %v\n", err)
 	}
 	log.Printf("    Event created: %s\n", event.Id)
 }

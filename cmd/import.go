@@ -54,19 +54,23 @@ func runImport(cmd *cobra.Command, args []string) {
 	calendarId := viper.GetString("calendarid")
 	isDryRun := viper.GetBool("dry-run")
 
-	log.Println("Starting import run with params:")
+	log.Println("\nStarting import run with params:")
 	log.Printf("  inputFile=%s\n", inputFile)
 	log.Printf("  employeeName=%s\n", employeeName)
 	log.Printf("  page=%d\n", page)
 	log.Printf("  calendarId=%s\n", calendarId)
-	log.Printf("  isDryRun=%t\n", isDryRun)
+	log.Printf("  isDryRun=%t\n\n", isDryRun)
 
 	parser := parser.New(employeeName, inputFile)
 	entries := parser.ProcessPages(page)
 
-	log.Printf("Starting to import events to calendar %s\n", calendarId)
+	log.Printf("\nStarting to import events to calendar %s\n", calendarId)
 	calendarClient := importer.NewCalendarClient(calendarId)
+
 	for _, pageEntries := range entries {
+		if !isDryRun {
+			calendarClient.ClearEvents(pageEntries.Month)
+		}
 		for _, entry := range pageEntries.Entries {
 			log.Printf("  Creating %s for %s...", entry.Description, entry.GetWorktime())
 

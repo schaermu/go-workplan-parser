@@ -27,12 +27,14 @@ func (s *ScheduleEntry) GetWorktime() string {
 }
 
 type ScheduleEntries struct {
+	Month   time.Time
 	Entries []ScheduleEntry
 }
 
-func NewScheduleEntries() ScheduleEntries {
+func NewScheduleEntries(startDate time.Time) ScheduleEntries {
 	return ScheduleEntries{
 		Entries: []ScheduleEntry{},
+		Month:   startDate,
 	}
 }
 

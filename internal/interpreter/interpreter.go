@@ -166,7 +166,7 @@ func (i *Interpreter) IdentifyWorkSchedule(scheduleRowFile string, startTime tim
 	mat := gocv.IMRead(scheduleRowFile, gocv.IMReadAnyColor)
 
 	maskMat := gocv.NewMat()
-	scheduleResults := NewScheduleEntries()
+	scheduleResults := NewScheduleEntries(startTime)
 	log.Print("    Starting detection loop for template icons...")
 	for _, schedule := range GetScheduleTypes() {
 		iconMat := gocv.IMRead(schedule.TemplateImage, gocv.IMReadAnyColor)
