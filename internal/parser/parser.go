@@ -27,7 +27,7 @@ func New(needle string, filePath string) *Parser {
 	}
 }
 
-func (p *Parser) ProcessPages(pageNumber int) map[int]*interpreter.ScheduleEntries {
+func (p *Parser) ProcessPages(pageNumber int32) map[int]*interpreter.ScheduleEntries {
 	file, err := os.Open(p.pdfFile)
 	if err != nil {
 		log.Fatal(err)
@@ -69,9 +69,6 @@ func (p *Parser) ProcessPages(pageNumber int) map[int]*interpreter.ScheduleEntri
 		schedule := interpreter.IdentifyWorkSchedule(scheduleRowFile, startTime)
 		schedule.SortEntriesByDate()
 
-		for _, entry := range schedule.Entries {
-			println(fmt.Sprintf("%s - %s", entry.GetWorktime(), entry.Code))
-		}
 		res[index+1] = &schedule
 	}
 	return res

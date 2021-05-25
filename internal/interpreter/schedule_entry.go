@@ -13,11 +13,13 @@ const TOLERANCE_Y = 8
 const SCHEDULE_ITEM_WIDTH = 87
 
 type ScheduleEntry struct {
-	Code    string
-	Start   time.Time
-	End     time.Time
-	SourceX int
-	SourceY int
+	Code          string
+	Description   string
+	IsAllDayEvent bool
+	Start         time.Time
+	End           time.Time
+	SourceX       int
+	SourceY       int
 }
 
 func (s *ScheduleEntry) GetWorktime() string {
@@ -62,11 +64,13 @@ func (se *ScheduleEntries) AddEntry(scheduleType ScheduleType, date time.Time, x
 	}
 
 	newEntry := ScheduleEntry{
-		Code:    scheduleType.Code,
-		Start:   time.Date(date.Year(), date.Month(), day, scheduleType.StartTime.Hour(), scheduleType.StartTime.Minute(), 0, 0, date.Location()),
-		End:     time.Date(date.Year(), date.Month(), day+endDayOffset, scheduleType.EndTime.Hour(), scheduleType.EndTime.Minute(), 0, 0, date.Location()),
-		SourceX: x,
-		SourceY: y,
+		Code:          scheduleType.Code,
+		Description:   scheduleType.Description,
+		IsAllDayEvent: scheduleType.IsAllDay,
+		Start:         time.Date(date.Year(), date.Month(), day, scheduleType.StartTime.Hour(), scheduleType.StartTime.Minute(), 0, 0, date.Location()),
+		End:           time.Date(date.Year(), date.Month(), day+endDayOffset, scheduleType.EndTime.Hour(), scheduleType.EndTime.Minute(), 0, 0, date.Location()),
+		SourceX:       x,
+		SourceY:       y,
 	}
 	se.Entries = append(se.Entries, newEntry)
 	return true

@@ -45,8 +45,40 @@ func NewCalendarClient(calendarId string) CalendarClient {
 	}
 }
 
-func (c *CalendarClient) CreateEvent(date time.Time, start time.Time, end time.Time, description string) {
+func (c *CalendarClient) CreateEvent(start time.Time, end time.Time, description string, isAllDayEvent bool) {
+	startDate := &calendar.EventDateTime{
+		DateTime: start.Format("2006-01-02T15:04:05"),
+		TimeZone: "Europe/Zurich",
+	}
+	endDate := &calendar.EventDateTime{
+		DateTime: end.Format("2006-01-02T15:04:05"),
+		TimeZone: "Europe/Zurich",
+	}
 
+	if isAllDayEvent {
+		fullDay, _ := time.ParseDuration("24h")
+		startDate = &calendar.EventDateTime{
+			Date:     start.Format("2006-01-02"),
+			TimeZone: "Europe/Zurich",
+		}
+		endDate = &calendar.EventDateTime{
+			Date:     start.Add(fullDay).Format("2006-01-02"),
+			TimeZone: "Europe/Zurich",
+		}
+	}
+
+	event := &calendar.Event{
+		Summary:      description,
+		Start:        startDate,
+		End:          endDate,
+		Transparency: "transparent",
+	}
+
+	event, err := c.client.Events.Insert(c.calendarId, event).Do()
+	if err != nil {
+		log.Fatalf("    Unable to create event %v\n", err)
+	}
+	log.Printf("    Event created: %s\n", event.Id)
 }
 
 // Retrieve a token, saves the token, then returns the generated client.
