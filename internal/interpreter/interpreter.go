@@ -26,7 +26,8 @@ var MONTH_LIST = []string{
 }
 
 type Interpreter struct {
-	plan string
+	plan         string
+	deskewedPlan string
 }
 
 func New(planImage string) Interpreter {
@@ -34,37 +35,63 @@ func New(planImage string) Interpreter {
 }
 
 func (i *Interpreter) GetSearchVector(needle string) (x int, y int, month int, year int) {
-	// create an ocr readable file from the original page (convert to b/w, gauss, binarize using threshold)
-	ocrImageFile := i.getNewFilename("ocr")
 	mat := gocv.IMRead(i.plan, gocv.IMReadAnyColor)
+
+	// pre-process original image and save all steps
 	grayMat := gocv.NewMat()
 	gocv.CvtColor(mat, &grayMat, gocv.ColorBGRAToGray)
+	gocv.IMWrite(i.getNewFilename("1_gray"), grayMat)
 	gaussMat := gocv.NewMat()
 	gocv.GaussianBlur(grayMat, &gaussMat, image.Point{X: 5, Y: 5}, 0, 0, gocv.BorderDefault)
+	gocv.IMWrite(i.getNewFilename("2_gaussed"), gaussMat)
 	threshMat := gocv.NewMat()
 	gocv.Threshold(gaussMat, &threshMat, 0, 255, gocv.ThresholdBinaryInv|gocv.ThresholdOtsu)
-	gocv.IMWrite(ocrImageFile, threshMat)
+	gocv.IMWrite(i.getNewFilename("3_thresh"), threshMat)
+
+	matWidth := mat.Size()[1]
+	matHeight := mat.Size()[0]
+
+	// deskew image based on threshold image
+	skewAngle := i.getSkewAngle(&threshMat)
+	log.Printf("  De-Skewing image by %.4f degrees", skewAngle)
+	center := image.Point{X: matWidth / 2, Y: matHeight / 2}
+	rotationMatrix := gocv.GetRotationMatrix2D(center, skewAngle, 1.0)
+
+	// de-skew both grayscale/thresh and original material
+	gocv.WarpAffineWithParams(mat, &mat, rotationMatrix, image.Point{X: matWidth, Y: matHeight}, gocv.InterpolationCubic, gocv.BorderConstant, color.RGBA{R: 255, G: 255, B: 255})
+	gocv.WarpAffineWithParams(grayMat, &grayMat, rotationMatrix, image.Point{X: matWidth, Y: matHeight}, gocv.InterpolationCubic, gocv.BorderConstant, color.RGBA{R: 255, G: 255, B: 255})
+	gocv.WarpAffineWithParams(threshMat, &threshMat, rotationMatrix, image.Point{X: matWidth, Y: matHeight}, gocv.InterpolationCubic, gocv.BorderConstant, color.RGBA{R: 255, G: 255, B: 255})
+	i.deskewedPlan = i.getNewFilename("4_deskewed")
+	gocv.IMWrite(i.deskewedPlan, mat)
 
 	// remove distracting lines
 	removeLine(&threshMat, image.Point{X: 80, Y: 1}, color.RGBA{R: 0, G: 0, B: 0})
 	removeLine(&threshMat, image.Point{X: 1, Y: 80}, color.RGBA{R: 0, G: 0, B: 0})
+	ocrImageFile := i.getNewFilename("5_ocr_base")
+	gocv.IMWrite(ocrImageFile, threshMat)
+	threshMat.Close()
+
+	// reload fresh ocr mat from disk
+	ocrMat := gocv.IMRead(ocrImageFile, gocv.IMReadGrayScale)
 
 	// configure text detection
 	kernel := gocv.GetStructuringElement(gocv.MorphRect, image.Point{X: 25, Y: 9})
-	dilatedMat := gocv.NewMat()
-	gocv.Dilate(threshMat, &dilatedMat, kernel)
+	gocv.Dilate(ocrMat, &ocrMat, kernel)
 
 	// mask irrelevant content
-	maskedImageFile := i.getNewFilename("mask")
 	maskMat := gocv.IMRead("assets/plan_mask.png", gocv.IMReadAnyColor)
+	// resize mask to fit input
+	gocv.Resize(maskMat, &maskMat, image.Point{X: mat.Size()[1], Y: mat.Size()[0]}, 0, 0, gocv.InterpolationLinear)
 	maskBwMat := gocv.NewMat()
 	gocv.CvtColor(maskMat, &maskBwMat, gocv.ColorBGRAToGray)
-	postProcessed := gocv.NewMat()
-	gocv.Subtract(dilatedMat, maskBwMat, &postProcessed)
-	gocv.IMWrite(maskedImageFile, postProcessed)
+
+	// mask irrelevant content
+	gocv.Subtract(ocrMat, maskBwMat, &ocrMat)
+	maskedImageFile := i.getNewFilename("6_ocr_mask")
+	gocv.IMWrite(maskedImageFile, ocrMat)
 	log.Print("  Stored masked ocr image, starting contour detection...")
 
-	contours := gocv.FindContours(postProcessed, gocv.RetrievalExternal, gocv.ChainApproxSimple)
+	contours := gocv.FindContours(ocrMat, gocv.RetrievalExternal, gocv.ChainApproxSimple)
 	ocrTargetMat := grayMat.Clone()
 	namePattern := regexp.MustCompile(`[^\p{L}\d_ ]+`)
 	yearOnlyPattern := regexp.MustCompile(`^2[0-9]{3}$`)
@@ -88,6 +115,8 @@ func (i *Interpreter) GetSearchVector(needle string) (x int, y int, month int, y
 		if text != "" {
 			// cleanup text by trimming and removing anything invalid
 			text = namePattern.ReplaceAllString(strings.TrimSpace(text), "")
+
+			log.Printf("    Processing text %s", text)
 
 			// check if we are processing the year only (caution: sometimes, ocr will split the month and year)
 			if year == 0 && yearOnlyPattern.MatchString(text) {
@@ -140,7 +169,7 @@ func (i *Interpreter) GetSearchVector(needle string) (x int, y int, month int, y
 
 func (i *Interpreter) ExtractScheduleRow(x int, y int) string {
 	scheduleRowFilename := i.getNewFilename("schedule_row")
-	mat := gocv.IMRead(i.plan, gocv.IMReadAnyColor)
+	mat := gocv.IMRead(i.deskewedPlan, gocv.IMReadAnyColor)
 	area := image.Rect(x, y, x+SCHEDULE_WIDTH, y+SCHEDULE_HEIGHT)
 	scheduleMat := mat.Region(area)
 
@@ -203,6 +232,29 @@ func (i *Interpreter) IdentifyWorkSchedule(scheduleRowFile string, startTime tim
 
 func (i *Interpreter) getNewFilename(part string) string {
 	return strings.Replace(i.plan, ".png", "_"+part+".png", -1)
+}
+
+func (i *Interpreter) getSkewAngle(threshMat *gocv.Mat) float64 {
+	skewMat := gocv.NewMat()
+	kernel := gocv.GetStructuringElement(gocv.MorphRect, image.Point{X: 3, Y: 80})
+	gocv.MorphologyEx(*threshMat, &skewMat, gocv.MorphOpen, kernel)
+	contours := gocv.FindContours(skewMat, gocv.RetrievalList, gocv.ChainApproxSimple)
+
+	highestContour := gocv.PointVector{}
+	currentMaxHeight := 0
+	for i := 0; i < contours.Size(); i++ {
+		gocv.DrawContours(&skewMat, contours, i, color.RGBA{R: 0, G: 255, B: 0}, 1)
+		currentContour := contours.At(i)
+		rect := gocv.BoundingRect(currentContour)
+		if currentMaxHeight < rect.Dy() {
+			highestContour = currentContour
+			currentMaxHeight = rect.Dy()
+		}
+		gocv.Rectangle(&skewMat, rect, color.RGBA{0, 0, 255, 0}, 2)
+	}
+
+	minAreaRect := gocv.MinAreaRect(highestContour)
+	return minAreaRect.Angle - 90
 }
 
 func removeLine(threshMat *gocv.Mat, sizeVector image.Point, maskColor color.RGBA) {
