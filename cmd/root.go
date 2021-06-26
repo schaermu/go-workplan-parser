@@ -16,12 +16,7 @@ var cfgFile string
 var rootCmd = &cobra.Command{
 	Use:   "workplan-parser",
 	Short: "Allows you to work with Inselgruppe workplans.",
-	Long: `This CLI allows you to parse data from Inselgruppe workplans for a specific employee.
-	
-The best usage is piped, for example:
-workplan-parser parse -i path/to/plan.pdf -e "Joan Doe" | workplan-parser import -c "Calendar name"
-
-If you want to just get some output, you can also just use parse.`,
+	Long:  `This CLI allows you to import data from Inselgruppe workplans for a specific employee into a google calendar.`,
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.

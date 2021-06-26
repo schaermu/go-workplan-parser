@@ -13,9 +13,12 @@ import (
 var importCmd = &cobra.Command{
 	Use:   "import",
 	Short: "Import a workplan schedule into a google calendar.",
-	Long: `You can import the data from a pdf file to your own google calendar.
+	Long: `Allows you to parse and import a PDF file directly to Google calendar.
+
+It is HIGHLY advised to run the import using --dry-run first to make sure the name is recognized and the fuzziness is configured correctly.
+If you want to debug the output, check the folder temp/workplan-parser-[RANDOMID] to check on the detection boxes.
 	
-Make sure you have a properly set up credentials.json file.`,
+If you want to finally import to Google, make sure you have a properly set up credentials.json file within this folder containing your private key for Google API.`,
 	Run: runImport,
 }
 
