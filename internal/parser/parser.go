@@ -16,18 +16,20 @@ import (
 )
 
 type Parser struct {
-	needle  string
-	pdfFile string
+	needle    string
+	pdfFile   string
+	fuzziness int
 }
 
-func New(needle string, filePath string) *Parser {
+func New(needle string, filePath string, detectionFuzziness int) *Parser {
 	return &Parser{
-		needle:  needle,
-		pdfFile: filePath,
+		needle:    needle,
+		pdfFile:   filePath,
+		fuzziness: detectionFuzziness,
 	}
 }
 
-func (p *Parser) ProcessPages(pageNumber int32) map[int]*interpreter.ScheduleEntries {
+func (p *Parser) ProcessPages(pageNumber int) map[int]*interpreter.ScheduleEntries {
 	file, err := os.Open(p.pdfFile)
 	if err != nil {
 		log.Fatal(err)
@@ -66,8 +68,9 @@ func (p *Parser) ProcessPages(pageNumber int32) map[int]*interpreter.ScheduleEnt
 		x, y, month, year := interpreter.GetSearchVector(p.needle)
 		scheduleRowFile := interpreter.ExtractScheduleRow(x, y)
 		startTime := time.Date(year, time.Month(month), 1, 0, 0, 0, 0, time.Now().Location())
-		schedule := interpreter.IdentifyWorkSchedule(scheduleRowFile, startTime)
+		schedule := interpreter.IdentifyWorkSchedule(scheduleRowFile, startTime, p.fuzziness)
 		schedule.SortEntriesByDate()
+		schedule.RemoveDuplicates()
 
 		res[index+1] = &schedule
 	}

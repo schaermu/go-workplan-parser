@@ -57,7 +57,7 @@ func (se *ScheduleEntries) AddEntry(scheduleType ScheduleType, date time.Time, x
 	}
 
 	// determine day based on x offset
-	day := (x-SCHEDULE_PADDING)/SCHEDULE_ITEM_WIDTH + 1
+	day := (x-SCHEDULE_PADDING_X)/SCHEDULE_ITEM_WIDTH + 1
 
 	// make sure overnight shifts are properly reflected
 	endDayOffset := 0
@@ -82,4 +82,16 @@ func (se *ScheduleEntries) SortEntriesByDate() {
 	sort.Slice(se.Entries, func(i, j int) bool {
 		return se.Entries[i].Start.Before(se.Entries[j].Start)
 	})
+}
+
+func (se *ScheduleEntries) RemoveDuplicates() {
+	keys := make(map[time.Time]bool)
+	newEntries := []ScheduleEntry{}
+	for _, entry := range se.Entries {
+		if _, ok := keys[entry.Start]; !ok {
+			keys[entry.Start] = true
+			newEntries = append(newEntries, entry)
+		}
+	}
+	se.Entries = newEntries
 }

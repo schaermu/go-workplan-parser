@@ -15,10 +15,11 @@ import (
 )
 
 const SCHEDULE_OFFSET_X = 980
-const SCHEDULE_OFFSET_Y = -30
+const SCHEDULE_OFFSET_Y = -15
 const SCHEDULE_WIDTH = 2780
 const SCHEDULE_HEIGHT = 95
-const SCHEDULE_PADDING = 20
+const SCHEDULE_PADDING_Y = 20
+const SCHEDULE_PADDING_X = 40
 
 var MONTH_LIST = []string{
 	"Januar", "Februar", "März", "April", "Mai", "Juni", "Juli",
@@ -178,10 +179,10 @@ func (i *Interpreter) ExtractScheduleRow(x int, y int) string {
 	gocv.CopyMakeBorder(
 		scheduleMat,
 		&paddedScheduleMat,
-		SCHEDULE_PADDING,
-		SCHEDULE_PADDING,
-		SCHEDULE_PADDING,
-		SCHEDULE_PADDING,
+		SCHEDULE_PADDING_Y,
+		SCHEDULE_PADDING_Y,
+		SCHEDULE_PADDING_X,
+		SCHEDULE_PADDING_X,
 		gocv.BorderConstant,
 		color.RGBA{R: 255, G: 255, B: 255, A: 1},
 	)
@@ -190,22 +191,25 @@ func (i *Interpreter) ExtractScheduleRow(x int, y int) string {
 	return scheduleRowFilename
 }
 
-func (i *Interpreter) IdentifyWorkSchedule(scheduleRowFile string, startTime time.Time) ScheduleEntries {
-	detectedScheduleRow := i.getNewFilename("schedule_row_detected")
-	mat := gocv.IMRead(scheduleRowFile, gocv.IMReadAnyColor)
+func (i *Interpreter) IdentifyWorkSchedule(scheduleRowFile string, startTime time.Time, fuzziness int) ScheduleEntries {
+	scheduleRowMat := gocv.IMRead(scheduleRowFile, gocv.IMReadAnyColor)
+
+	// apply gaussion blur to counter scan-fuzziness
+	gocv.GaussianBlur(scheduleRowMat, &scheduleRowMat, image.Point{X: fuzziness, Y: fuzziness}, 0, 0, gocv.BorderDefault)
+	gocv.IMWrite(i.getNewFilename("schedule_row_1_gaussed"), scheduleRowMat)
 
 	maskMat := gocv.NewMat()
 	scheduleResults := NewScheduleEntries(startTime)
+	var threshold float32 = 0.8
 	log.Print("    Starting detection loop for template icons...")
 	for _, schedule := range GetScheduleTypes() {
 		iconMat := gocv.IMRead(schedule.TemplateImage, gocv.IMReadAnyColor)
 
-		resultMat := gocv.NewMatWithSize(mat.Rows()-iconMat.Rows()+1, mat.Cols()-iconMat.Cols()+1, gocv.MatTypeCV32FC1)
-		gocv.MatchTemplate(mat, iconMat, &resultMat, gocv.TmCcoeffNormed, maskMat)
-		gocv.Threshold(resultMat, &resultMat, 0.8, 1.0, gocv.ThresholdToZero)
+		resultMat := gocv.NewMatWithSize(scheduleRowMat.Rows()-iconMat.Rows()+1, scheduleRowMat.Cols()-iconMat.Cols()+1, gocv.MatTypeCV32FC1)
+		gocv.MatchTemplate(scheduleRowMat, iconMat, &resultMat, gocv.TmCcoeffNormed, maskMat)
+		gocv.Threshold(resultMat, &resultMat, threshold, 1.0, gocv.ThresholdToZero)
 
 		for {
-			var threshold float32 = 0.80
 			_, maxVal, _, maxLoc := gocv.MinMaxLoc(resultMat)
 
 			if maxVal >= threshold {
@@ -214,7 +218,7 @@ func (i *Interpreter) IdentifyWorkSchedule(scheduleRowFile string, startTime tim
 				// make sure we dont add false positives
 				if added := scheduleResults.AddEntry(schedule, startTime, maxLoc.X, maxLoc.Y); added {
 					log.Printf("      Found match for %s at %d,%d...", schedule.Code, maxLoc.X, maxLoc.Y)
-					gocv.Rectangle(&mat, matchRect, color.RGBA{R: 0, G: 255, B: 0}, 2)
+					gocv.Rectangle(&scheduleRowMat, matchRect, color.RGBA{R: 0, G: 255, B: 0}, 2)
 				}
 
 				// fill the resultMat area to prevent finding the template again
@@ -225,7 +229,7 @@ func (i *Interpreter) IdentifyWorkSchedule(scheduleRowFile string, startTime tim
 		}
 	}
 
-	gocv.IMWrite(detectedScheduleRow, mat)
+	gocv.IMWrite(i.getNewFilename("schedule_row_2_detected"), scheduleRowMat)
 	log.Print("  Stored detection results.")
 	return scheduleResults
 }
