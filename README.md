@@ -16,5 +16,5 @@ WIP
 
 ## Usage (wip)
 ```
-workplan-parser parse -i [PATH_TO_PDF] -e "[EMPLOYEE_NAME]]"
+workplan-parser import -i [PATH_TO_PDF] -e "[EMPLOYEE_NAME]"
 ```

@@ -53,13 +53,13 @@ func (p *Parser) ProcessPages(pageNumber int) map[int]*interpreter.ScheduleEntri
 		log.Fatal(err)
 	}
 
-	images, err := ioutil.ReadDir(tempDir)
+	pageFiles, err := ioutil.ReadDir(tempDir)
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	res := map[int]*interpreter.ScheduleEntries{}
-	for index, f := range images {
+	for index, f := range pageFiles {
 		imageFileName := path.Join(tempDir, strings.Replace(f.Name(), ".pdf", ".png", -1))
 		log.Printf("Processing page %s...\n", f.Name())
 		p.convertPageToImage(path.Join(tempDir, f.Name()), imageFileName)
@@ -78,6 +78,19 @@ func (p *Parser) ProcessPages(pageNumber int) map[int]*interpreter.ScheduleEntri
 }
 
 func (p *Parser) convertPageToImage(pdfPath string, target string) {
+	ctx, err := api.ReadContextFile(pdfPath)
+	if err != nil {
+		log.Fatalf("Could not load context for file %s", pdfPath)
+	}
+
+	// auto-rotate pdf if it was scanned in portrait format
+	if dimensions, err := ctx.PageDims(); err == nil && len(dimensions) == 1 {
+		if dimensions[0].Width > dimensions[0].Height {
+			// wrong orientation, rotate file
+			api.RotateFile(pdfPath, pdfPath, 90, nil, nil)
+		}
+	}
+
 	imagick.Initialize()
 	defer imagick.Terminate()
 	mw := imagick.NewMagickWand()

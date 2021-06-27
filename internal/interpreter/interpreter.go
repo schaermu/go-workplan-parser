@@ -97,6 +97,7 @@ func (i *Interpreter) GetSearchVector(needle string) (x int, y int, month int, y
 	namePattern := regexp.MustCompile(`[^\p{L}\d_ ]+`)
 	yearOnlyPattern := regexp.MustCompile(`^2[0-9]{3}$`)
 	yearPattern := regexp.MustCompile(`2[0-9]{3}`)
+	monthYearPattern := regexp.MustCompile(`(?P<Month>[a-zA-Z]{3,10}) (?P<Year>2[0-9]{3})`)
 
 	tesseract := gosseract.NewClient()
 	tesseract.Languages = []string{"deu"}
@@ -131,21 +132,24 @@ func (i *Interpreter) GetSearchVector(needle string) (x int, y int, month int, y
 
 			if month == 0 {
 				// check if we got both month an year in one line
-				if yearPattern.MatchString(text) {
-					year, err = strconv.Atoi(yearPattern.FindString(text))
-					if err != nil {
-						log.Print(err)
+				if monthYearPattern.MatchString(text) {
+					matches := monthYearPattern.FindStringSubmatch(text)
+					if len(matches) > 0 {
+						year, err = strconv.Atoi(matches[monthYearPattern.SubexpIndex("Year")])
+						if err != nil {
+							log.Print(err)
+						}
+						monthName := matches[monthYearPattern.SubexpIndex("Month")]
+						month = GetMonthIndex(monthName)
+						log.Printf("    Fuzzy year/month match: %s => y = %d / m = %d", text, year, month)
 					}
-					log.Printf("    Fuzzy year match %s => %d", text, year)
 				}
 
-				// strip numbers from text before checking for month
-				nonIntText := strings.TrimSpace(yearPattern.ReplaceAllString(text, ""))
-				for idx, m := range MONTH_LIST {
-					if nonIntText == m {
-						month = idx + 1
+				if month == 0 {
+					// strip numbers from text before checking for month directly
+					month = GetMonthIndex(strings.TrimSpace(yearPattern.ReplaceAllString(text, "")))
+					if month > 0 {
 						log.Printf("    Month match %s => %d", text, month)
-						break
 					}
 				}
 			}
@@ -166,6 +170,15 @@ func (i *Interpreter) GetSearchVector(needle string) (x int, y int, month int, y
 	log.Printf("  Setting month to %s %d.", MONTH_LIST[month-1], year)
 
 	return x, y, month, year
+}
+
+func GetMonthIndex(month string) int {
+	for idx, m := range MONTH_LIST {
+		if month == m {
+			return idx + 1
+		}
+	}
+	return 0
 }
 
 func (i *Interpreter) ExtractScheduleRow(x int, y int) string {
