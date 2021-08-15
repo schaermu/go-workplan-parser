@@ -12,7 +12,7 @@ import (
 	"github.com/pdfcpu/pdfcpu/pkg/api"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
 	"github.com/schaermu/workplan-parser/internal/interpreter"
-	"gopkg.in/gographics/imagick.v2/imagick"
+	"gopkg.in/gographics/imagick.v3/imagick"
 )
 
 type Parser struct {
@@ -84,8 +84,8 @@ func (p *Parser) convertPageToImage(pdfPath string, target string) {
 	}
 
 	// auto-rotate pdf if it was scanned in portrait format
-	if dimensions, err := ctx.PageDims(); err == nil && len(dimensions) == 1 {
-		if dimensions[0].Width > dimensions[0].Height {
+	if dimensions, err := ctx.PageDims(); err == nil {
+		if len(dimensions) == 1 && dimensions[0].Height > dimensions[0].Width {
 			// wrong orientation, rotate file
 			api.RotateFile(pdfPath, pdfPath, 90, nil, nil)
 		}

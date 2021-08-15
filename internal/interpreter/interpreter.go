@@ -109,7 +109,7 @@ func (i *Interpreter) GetSearchVector(needle string) (x int, y int, month int, y
 		croppedMat := ocrTargetMat.Region(ocrRect)
 
 		imageBytes, _ := gocv.IMEncode(gocv.PNGFileExt, croppedMat)
-		tesseract.SetImageFromBytes(imageBytes)
+		tesseract.SetImageFromBytes(imageBytes.GetBytes())
 		text, err := tesseract.Text()
 		if err != nil {
 			log.Print(err)
