@@ -22,11 +22,14 @@ var scheduleTypes = []ScheduleType{
 	createScheduleType("hosp", "Hosp-Dienst", "1_gelb", "07:45", "16:45"),
 	createScheduleType("tagspaet", "Tagdienst (spät)", "t2", "09:00", "18:00"),
 	createScheduleType("aufnahme", "Aufnahme", "a13", "07:45", "16:45"),
-	createScheduleType("aufnahme2", "Aufnahme", "a2", "07:45", "16:45"),
+	//createScheduleType("aufnahme2", "Aufnahme", "a2", "07:45", "16:45"),
 	createScheduleType("ferien", "Ferien", "ferien", "", ""),
 	createScheduleType("frei", "Frei", "frei", "", ""),
 	createScheduleType("pikket_12h", "Pikket", "pikett_12", "", ""),
 	createScheduleType("pikett_24h", "Pikket", "pikett_24", "", ""),
+	createScheduleType("weiterbildung_ganz", "Weiterbildung", "wb_ganz", "08:00", "17:00"),
+	createScheduleType("weiterbildung_vorm", "Weiterbildung", "wb_vorm", "08:00", "12:00"),
+	createScheduleType("weiterbildung_nachm", "Weiterbildung", "wb_nachm", "12:00", "17:00"),
 }
 
 func createScheduleType(code string, description string, image string, start string, end string) ScheduleType {

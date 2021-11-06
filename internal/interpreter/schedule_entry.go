@@ -10,7 +10,7 @@ const TOLERANCE_X = 8
 const TOLERANCE_Y = 8
 
 // TODO: we have to figure out a better way to determine the correct day...
-const SCHEDULE_ITEM_WIDTH = 87
+const SCHEDULE_ITEM_WIDTH = 98
 
 type ScheduleEntry struct {
 	Code          string

@@ -28,7 +28,7 @@ func init() {
 	importCmd.Flags().StringP("inputfile", "i", "", "Path to pdf file (can also be supplied to stdin).")
 	importCmd.Flags().StringP("employee", "e", "", "Name of the employee to export data for")
 	importCmd.Flags().Int32P("page", "p", -1, "Page number to import (default = all)")
-	importCmd.Flags().Int32P("fuzziness", "f", 5, "Detection fuzziness, increase for sharper scans (default = 5, has to be odd)")
+	importCmd.Flags().Int32P("fuzziness", "f", 15, "Detection fuzziness, increase for sharper scans (default = 5, has to be odd)")
 	importCmd.Flags().StringP("calendarid", "c", "", "CalendarID of the google calendar to import data into.")
 	importCmd.Flags().Bool("dry-run", false, "Don't import anything, only print actions to stdout.")
 

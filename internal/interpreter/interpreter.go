@@ -15,15 +15,17 @@ import (
 )
 
 const SCHEDULE_OFFSET_X = 980
-const SCHEDULE_OFFSET_Y = -15
-const SCHEDULE_WIDTH = 2780
+const SCHEDULE_OFFSET_Y = -25
+const SCHEDULE_WIDTH = 2980
 const SCHEDULE_HEIGHT = 95
 const SCHEDULE_PADDING_Y = 20
 const SCHEDULE_PADDING_X = 40
 
-var MONTH_LIST = []string{
-	"Januar", "Februar", "März", "April", "Mai", "Juni", "Juli",
-	"August", "September", "Oktober", "November", "Dezember",
+var MONTH_LIST = [][]string{
+	{"Januar", "Februar", "März", "April", "Mai", "Juni", "Juli",
+		"August", "September", "Oktober", "November", "Dezember"},
+	{"janvier", "février", "mars", "avril", "mai", "juin", "juillet",
+		"août", "septembre", "octobre", "novembre", "décembre"},
 }
 
 type Interpreter struct {
@@ -103,6 +105,8 @@ func (i *Interpreter) GetSearchVector(needle string) (x int, y int, month int, y
 	tesseract.Languages = []string{"deu"}
 	defer tesseract.Close()
 
+	var monthName string
+
 	log.Printf("  Starting OCR on %d contours looking for '%s'...", contours.Size(), needle)
 	for i := 0; i < contours.Size(); i++ {
 		ocrRect := gocv.BoundingRect(contours.At(i))
@@ -149,6 +153,7 @@ func (i *Interpreter) GetSearchVector(needle string) (x int, y int, month int, y
 					// strip numbers from text before checking for month directly
 					month = GetMonthIndex(strings.TrimSpace(yearPattern.ReplaceAllString(text, "")))
 					if month > 0 {
+						monthName = text
 						log.Printf("    Month match %s => %d", text, month)
 					}
 				}
@@ -167,15 +172,17 @@ func (i *Interpreter) GetSearchVector(needle string) (x int, y int, month int, y
 		}
 	}
 
-	log.Printf("  Setting month to %s %d.", MONTH_LIST[month-1], year)
+	log.Printf("  Setting month to %s %d.", monthName, year)
 
 	return x, y, month, year
 }
 
 func GetMonthIndex(month string) int {
-	for idx, m := range MONTH_LIST {
-		if month == m {
-			return idx + 1
+	for _, lang := range MONTH_LIST {
+		for idx, m := range lang {
+			if month == m {
+				return idx + 1
+			}
 		}
 	}
 	return 0
@@ -216,6 +223,7 @@ func (i *Interpreter) IdentifyWorkSchedule(scheduleRowFile string, startTime tim
 	var threshold float32 = 0.8
 	log.Print("    Starting detection loop for template icons...")
 	for _, schedule := range GetScheduleTypes() {
+		log.Printf("    Starting detection loop for %q...", schedule.Code)
 		iconMat := gocv.IMRead(schedule.TemplateImage, gocv.IMReadAnyColor)
 
 		resultMat := gocv.NewMatWithSize(scheduleRowMat.Rows()-iconMat.Rows()+1, scheduleRowMat.Cols()-iconMat.Cols()+1, gocv.MatTypeCV32FC1)
@@ -230,7 +238,7 @@ func (i *Interpreter) IdentifyWorkSchedule(scheduleRowFile string, startTime tim
 
 				// make sure we dont add false positives
 				if added := scheduleResults.AddEntry(schedule, startTime, maxLoc.X, maxLoc.Y); added {
-					log.Printf("      Found match for %s at %d,%d...", schedule.Code, maxLoc.X, maxLoc.Y)
+					log.Printf("      Found match for %q at %d,%d...", schedule.Code, maxLoc.X, maxLoc.Y)
 					gocv.Rectangle(&scheduleRowMat, matchRect, color.RGBA{R: 0, G: 255, B: 0}, 2)
 				}
 
