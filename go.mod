@@ -21,10 +21,10 @@ require (
 	gocv.io/x/gocv v0.28.0
 	golang.org/x/net v0.0.0-20210525063256-abc453219eb5 // indirect
 	golang.org/x/oauth2 v0.0.0-20210514164344-f6687ab2804c
-	golang.org/x/sys v0.0.0-20210521203332-0cec03c779c1 // indirect
+	golang.org/x/sys v0.1.0 // indirect
 	google.golang.org/api v0.47.0
 	google.golang.org/genproto v0.0.0-20210524171403-669157292da3 // indirect
 	google.golang.org/grpc v1.38.0 // indirect
-	gopkg.in/gographics/imagick.v3 v3.4.0 // indirect
+	gopkg.in/gographics/imagick.v3 v3.4.0
 	gopkg.in/ini.v1 v1.62.0 // indirect
 )
