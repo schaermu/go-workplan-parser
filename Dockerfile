@@ -1,6 +1,7 @@
 FROM golang:alpine as build-stage
 
 ENV OPENCV_VERSION=4.5.3
+ENV GOCV_VERSION=v0.32.1
 ENV BUILD="ca-certificates \
          git \
          build-base \
@@ -75,7 +76,7 @@ ENV CGO_CXXFLAGS "--std=c++1z"
 ENV CGO_LDFLAGS "-L/usr/local/lib -lopencv_core -lopencv_face -lopencv_videoio -lopencv_imgproc -lopencv_highgui -lopencv_imgcodecs -lopencv_objdetect -lopencv_features2d -lopencv_video -lopencv_dnn -lopencv_xfeatures2d -lopencv_plot -lopencv_tracking"
 
 RUN go get -u -d gocv.io/x/gocv
-RUN cd $GOPATH/pkg/mod/gocv.io/x/gocv@v0.28.0 && go build -o $GOPATH/bin/workplan-parser .
+RUN cd $GOPATH/pkg/mod/gocv.io/x/gocv@${GOCV_VERSION} && go build -o $GOPATH/bin/workplan-parser .
 
 FROM golang:alpine
 

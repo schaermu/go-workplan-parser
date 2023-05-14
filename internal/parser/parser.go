@@ -10,9 +10,9 @@ import (
 	"time"
 
 	"github.com/pdfcpu/pdfcpu/pkg/api"
-	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 	"github.com/schaermu/workplan-parser/internal/interpreter"
-	"gopkg.in/gographics/imagick.v3/imagick"
+	"gopkg.in/gographics/imagick.v2/imagick"
 )
 
 type Parser struct {
@@ -47,7 +47,7 @@ func (p *Parser) ProcessPages(pageNumber int) map[int]*interpreter.ScheduleEntri
 		selectedPages = append(selectedPages, fmt.Sprintf("%d", pageNumber))
 	}
 
-	config := pdfcpu.NewDefaultConfiguration()
+	config := model.NewDefaultConfiguration()
 	err = api.ExtractPagesFile(p.pdfFile, tempDir, selectedPages, config)
 	if err != nil {
 		log.Fatal(err)
